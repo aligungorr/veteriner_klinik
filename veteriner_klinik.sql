@@ -233,7 +233,7 @@ END$$
 -- TRIGGERS
 -- ============================================
 
--- Trigger 1: Muayene ücreti negatif olamaz
+-- Trigger 1: Muayene ücreti negatif olamaz (INSERT)
 CREATE TRIGGER tg_muayene_ucret_kontrol
 BEFORE INSERT ON muayeneler
 FOR EACH ROW
@@ -244,14 +244,14 @@ BEGIN
     END IF;
 END$$
 
--- Trigger 2: Güncelleme sırasında da ücret kontrolü
-CREATE TRIGGER tg_muayene_ucret_guncelle_kontrol
-BEFORE UPDATE ON muayeneler
+-- Trigger 2: Hayvan doğum tarihi bugünden ileri olamaz
+CREATE TRIGGER tg_hayvan_dogum_kontrol
+BEFORE INSERT ON hayvanlar
 FOR EACH ROW
 BEGIN
-    IF NEW.muayene_ucret < 0 THEN
+    IF NEW.hayvan_dogum > CURDATE() THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Hata: Muayene ücreti 0dan küçük olamaz!';
+        SET MESSAGE_TEXT = 'Hata: Hayvanın doğum tarihi bugünden ileri bir tarih olamaz!';
     END IF;
 END$$
 
