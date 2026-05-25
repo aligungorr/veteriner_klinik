@@ -78,6 +78,8 @@ function kullanici_getir($conn, $ad) {
 }
 
 // ===== FUNCTIONS (MySQL fonksiyonlarını çağır) =====
+
+// Sahibin toplam muayene borcu
 function sahip_toplam_borc($conn, $sahip_id) {
     $result = mysqli_query($conn, "SELECT fn_SahipToplamBorc($sahip_id) as toplam");
     if ($result) {
@@ -87,11 +89,22 @@ function sahip_toplam_borc($conn, $sahip_id) {
     return 0;
 }
 
+// Hayvanın toplam muayene sayısı
 function hayvan_muayene_sayisi($conn, $hayvan_id) {
     $result = mysqli_query($conn, "SELECT fn_HayvanMuayeneSayisi($hayvan_id) as sayi");
     if ($result) {
         $row = mysqli_fetch_assoc($result);
         return $row['sayi'] ?? 0;
+    }
+    return 0;
+}
+
+// Sahibin net bakiyesi (Borç - Ödeme = Kalan)
+function sahip_net_bakiye($conn, $sahip_id) {
+    $result = mysqli_query($conn, "SELECT fn_SahipNetBakiye($sahip_id) as bakiye");
+    if ($result) {
+        $row = mysqli_fetch_assoc($result);
+        return $row['bakiye'] ?? 0;
     }
     return 0;
 }
