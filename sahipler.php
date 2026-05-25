@@ -1,20 +1,42 @@
 <?php
 require_once 'layout.php';
 
+$hata_mesaji = null;
+$basari_mesaji = null;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
         if ($_POST['action'] === 'ekle') {
             sahip_ekle($conn, $_POST['ad'], $_POST['soyad'], $_POST['tel'], $_POST['mail'], $_POST['adres']);
+            $basari_mesaji = "Sahip başarıyla eklendi.";
         } elseif ($_POST['action'] === 'guncelle') {
             sahip_guncelle($conn, $_POST['id'], $_POST['ad'], $_POST['soyad'], $_POST['tel'], $_POST['mail'], $_POST['adres']);
+            $basari_mesaji = "Sahip başarıyla güncellendi.";
         } elseif ($_POST['action'] === 'sil') {
             sahip_sil($conn, $_POST['id']);
+            $basari_mesaji = "Sahip silindi.";
         }
     }
 }
 
 $sahipler = sahip_listele($conn);
 ?>
+
+<?php if ($hata_mesaji): ?>
+<div class="alert alert-danger alert-dismissible fade show mx-0 mb-3" role="alert">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <strong>Hata:</strong> <?= htmlspecialchars($hata_mesaji) ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<?php endif; ?>
+
+<?php if ($basari_mesaji): ?>
+<div class="alert alert-success alert-dismissible fade show mx-0 mb-3" role="alert">
+    <i class="fas fa-check-circle me-2"></i>
+    <?= htmlspecialchars($basari_mesaji) ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<?php endif; ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
@@ -41,24 +63,37 @@ $sahipler = sahip_listele($conn);
                         <th>Telefon</th>
                         <th>Mail</th>
                         <th>Adres</th>
+                        <th>Toplam Borç</th>
                         <th>İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($sahipler)): ?>
                     <tr>
-                        <td colspan="6" class="text-center py-4 text-muted">
+                        <td colspan="7" class="text-center py-4 text-muted">
                             <i class="fas fa-inbox fa-2x mb-2 d-block"></i>Henüz sahip kaydı yok.
                         </td>
                     </tr>
                     <?php else: ?>
                     <?php foreach ($sahipler as $s): ?>
+                    <?php $borc = sahip_toplam_borc($conn, $s['sahip_id']); ?>
                     <tr>
                         <td><span class="badge-custom">#<?= $s['sahip_id'] ?></span></td>
                         <td><strong><?= htmlspecialchars($s['sahip_ad'] . ' ' . $s['sahip_soyad']) ?></strong></td>
                         <td><i class="fas fa-phone me-1 text-muted"></i><?= htmlspecialchars($s['sahip_tel']) ?></td>
                         <td><i class="fas fa-envelope me-1 text-muted"></i><?= htmlspecialchars($s['sahip_mail']) ?></td>
                         <td><?= htmlspecialchars($s['sahip_adres']) ?></td>
+                        <td>
+                            <?php if ($borc > 0): ?>
+                                <span class="badge" style="background:#fde8e8;color:#dc3545;font-size:0.85rem;padding:6px 10px;">
+                                    <i class="fas fa-lira-sign me-1"></i><?= number_format($borc, 2) ?> ₺
+                                </span>
+                            <?php else: ?>
+                                <span class="badge" style="background:#e8f5ee;color:#1a7a45;font-size:0.85rem;padding:6px 10px;">
+                                    <i class="fas fa-check me-1"></i>Borç Yok
+                                </span>
+                            <?php endif; ?>
+                        </td>
                         <td>
                             <button class="btn-edit btn btn-sm me-1"
                                 data-bs-toggle="modal" data-bs-target="#guncelleModal"
@@ -72,7 +107,6 @@ $sahipler = sahip_listele($conn);
                                 )">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <!-- Silme: POST form ile -->
                             <form method="POST" style="display:inline"
                                 onsubmit="return confirm('Silmek istediğinize emin misiniz?')">
                                 <input type="hidden" name="action" value="sil">
