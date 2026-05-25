@@ -1,14 +1,30 @@
 <?php
 require_once 'layout.php';
 
+$hata_mesaji = null;
+$basari_mesaji = null;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
         if ($_POST['action'] === 'ekle') {
-            hayvan_ekle($conn, $_POST['sahip_id'], $_POST['ad'], $_POST['tur'], $_POST['irk'], $_POST['dogum'], $_POST['cinsiyet']);
+            $result = hayvan_ekle($conn, $_POST['sahip_id'], $_POST['ad'], $_POST['tur'], $_POST['irk'], $_POST['dogum'], $_POST['cinsiyet']);
+            if ($result === false && isset($_SESSION['hata'])) {
+                $hata_mesaji = $_SESSION['hata'];
+                unset($_SESSION['hata']);
+            } else {
+                $basari_mesaji = "Hayvan başarıyla eklendi.";
+            }
         } elseif ($_POST['action'] === 'guncelle') {
-            hayvan_guncelle($conn, $_POST['id'], $_POST['ad'], $_POST['tur'], $_POST['irk'], $_POST['dogum'], $_POST['cinsiyet']);
+            $result = hayvan_guncelle($conn, $_POST['id'], $_POST['ad'], $_POST['tur'], $_POST['irk'], $_POST['dogum'], $_POST['cinsiyet']);
+            if ($result === false && isset($_SESSION['hata'])) {
+                $hata_mesaji = $_SESSION['hata'];
+                unset($_SESSION['hata']);
+            } else {
+                $basari_mesaji = "Hayvan başarıyla güncellendi.";
+            }
         } elseif ($_POST['action'] === 'sil') {
             hayvan_sil($conn, $_POST['id']);
+            $basari_mesaji = "Hayvan silindi.";
         }
     }
 }
@@ -16,6 +32,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $hayvanlar = hayvan_listele($conn);
 $sahipler = sahip_listele($conn);
 ?>
+
+<?php if ($hata_mesaji): ?>
+<div class="alert alert-danger alert-dismissible fade show mx-0 mb-3" role="alert">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <strong>Hata:</strong> <?= htmlspecialchars($hata_mesaji) ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<?php endif; ?>
+
+<?php if ($basari_mesaji): ?>
+<div class="alert alert-success alert-dismissible fade show mx-0 mb-3" role="alert">
+    <i class="fas fa-check-circle me-2"></i>
+    <?= htmlspecialchars($basari_mesaji) ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<?php endif; ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
@@ -136,7 +168,7 @@ $sahipler = sahip_listele($conn);
                         </div>
                         <div class="col-6">
                             <label class="form-label">Doğum Tarihi</label>
-                            <input type="date" name="dogum" class="form-control" required>
+                            <input type="date" name="dogum" class="form-control" max="<?= date('Y-m-d') ?>" required>
                         </div>
                         <div class="col-6">
                             <label class="form-label">Cinsiyet</label>
@@ -183,7 +215,7 @@ $sahipler = sahip_listele($conn);
                         </div>
                         <div class="col-6">
                             <label class="form-label">Doğum Tarihi</label>
-                            <input type="date" name="dogum" id="g_dogum" class="form-control" required>
+                            <input type="date" name="dogum" id="g_dogum" class="form-control" max="<?= date('Y-m-d') ?>" required>
                         </div>
                         <div class="col-6">
                             <label class="form-label">Cinsiyet</label>
