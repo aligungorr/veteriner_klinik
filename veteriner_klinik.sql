@@ -206,6 +206,7 @@ END$$
 -- FUNCTIONS
 -- ============================================
 
+-- Sahibin tüm muayene ücretleri toplamı
 CREATE FUNCTION fn_SahipToplamBorc(p_sahip_id INT)
 RETURNS DECIMAL(10,2)
 DETERMINISTIC
@@ -218,6 +219,7 @@ BEGIN
     RETURN toplam;
 END$$
 
+-- Bir hayvanın toplam muayene sayısı
 CREATE FUNCTION fn_HayvanMuayeneSayisi(p_hayvan_id INT)
 RETURNS INT
 DETERMINISTIC
@@ -227,6 +229,26 @@ BEGIN
     FROM muayeneler
     WHERE hayvan_id = p_hayvan_id;
     RETURN sayi;
+END$$
+
+-- Sahibin net bakiyesi (Toplam Borç - Toplam Ödeme)
+CREATE FUNCTION fn_SahipNetBakiye(p_sahip_id INT)
+RETURNS DECIMAL(10,2)
+DETERMINISTIC
+BEGIN
+    DECLARE toplam_borc DECIMAL(10,2);
+    DECLARE toplam_odeme DECIMAL(10,2);
+
+    SELECT COALESCE(SUM(m.muayene_ucret), 0) INTO toplam_borc
+    FROM muayeneler m
+    JOIN hayvanlar h ON m.hayvan_id = h.hayvan_id
+    WHERE h.sahip_id = p_sahip_id;
+
+    SELECT COALESCE(SUM(odeme_tutar), 0) INTO toplam_odeme
+    FROM odemeler
+    WHERE sahip_id = p_sahip_id;
+
+    RETURN toplam_borc - toplam_odeme;
 END$$
 
 -- ============================================
