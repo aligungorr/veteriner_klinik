@@ -1,14 +1,34 @@
 <?php
 require_once 'layout.php';
 
+$hata_mesaji = null;
+$basari_mesaji = null;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
         if ($_POST['action'] === 'ekle') {
-            muayene_ekle($conn, $_POST['hayvan_id'], $_POST['doktor_id'], $_POST['tani'], $_POST['tedavi'], $_POST['ucret']);
+            $result = muayene_ekle($conn, $_POST['hayvan_id'], $_POST['doktor_id'], $_POST['tani'], $_POST['tedavi'], $_POST['ucret']);
+            if ($result === false && isset($_SESSION['hata'])) {
+                $hata_mesaji = $_SESSION['hata'];
+                unset($_SESSION['hata']);
+            } else {
+                $basari_mesaji = "Muayene başarıyla eklendi.";
+            }
         } elseif ($_POST['action'] === 'guncelle') {
-            muayene_guncelle($conn, $_POST['id'], $_POST['tani'], $_POST['tedavi'], $_POST['ucret']);
+            $result = muayene_guncelle($conn, $_POST['id'], $_POST['tani'], $_POST['tedavi'], $_POST['ucret']);
+            if ($result === false && isset($_SESSION['hata'])) {
+                $hata_mesaji = $_SESSION['hata'];
+                unset($_SESSION['hata']);
+            } else {
+                $basari_mesaji = "Muayene başarıyla güncellendi.";
+            }
         } elseif ($_POST['action'] === 'sil') {
             muayene_sil($conn, $_POST['id']);
+            $basari_mesaji = "Muayene silindi.";
+        } elseif ($_POST['action'] === 'odeme_al') {
+            // Muayeneden gelen bilgiyle otomatik ödeme oluştur
+            odeme_ekle($conn, $_POST['sahip_id'], $_POST['tutar'], $_POST['tur'], 'Muayene ID: ' . $_POST['muayene_id'] . ' için ödeme');
+            $basari_mesaji = "Ödeme başarıyla alındı.";
         }
     }
 }
@@ -16,7 +36,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $muayeneler = muayene_listele($conn);
 $hayvanlar = hayvan_listele($conn);
 $doktorlar = doktor_listele($conn);
+$sahipler = sahip_listele($conn);
 ?>
+
+<?php if ($hata_mesaji): ?>
+<div class="alert alert-danger alert-dismissible fade show mx-0 mb-3" role="alert">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <strong>Hata:</strong> <?= htmlspecialchars($hata_mesaji) ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<?php endif; ?>
+
+<?php if ($basari_mesaji): ?>
+<div class="alert alert-success alert-dismissible fade show mx-0 mb-3" role="alert">
+    <i class="fas fa-check-circle me-2"></i>
+    <?= htmlspecialchars($basari_mesaji) ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<?php endif; ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
@@ -57,6 +94,16 @@ $doktorlar = doktor_listele($conn);
                     </tr>
                     <?php else: ?>
                     <?php foreach ($muayeneler as $m): ?>
+                    <?php
+                        // Hayvanın sahibini bul
+                        $sahip_id = null;
+                        foreach ($hayvanlar as $h) {
+                            if ($h['hayvan_id'] == $m['hayvan_id']) {
+                                $sahip_id = $h['sahip_id'];
+                                break;
+                            }
+                        }
+                    ?>
                     <tr>
                         <td><span class="badge-custom">#<?= $m['muayene_id'] ?></span></td>
                         <td><strong><?= htmlspecialchars($m['hayvan_ad']) ?></strong></td>
@@ -64,8 +111,16 @@ $doktorlar = doktor_listele($conn);
                         <td><?= htmlspecialchars($m['muayene_tarih']) ?></td>
                         <td><?= htmlspecialchars($m['muayene_tani']) ?></td>
                         <td><?= htmlspecialchars($m['muayene_tedavi']) ?></td>
-                        <td><strong style="color:#1565c0"><?= htmlspecialchars($m['muayene_ucret']) ?> ₺</strong></td>
+                        <td><strong style="color:#1565c0"><?= number_format($m['muayene_ucret'], 2) ?> ₺</strong></td>
                         <td>
+                            <!-- Ödeme Al butonu -->
+                            <button class="btn btn-sm me-1"
+                                style="background:#e8f5ee;color:#1a7a45;border:none;border-radius:8px;padding:6px 10px;"
+                                data-bs-toggle="modal" data-bs-target="#odemeModal"
+                                onclick="odemeAc(<?= $m['muayene_id'] ?>, <?= $sahip_id ?>, <?= $m['muayene_ucret'] ?>)"
+                                title="Ödeme Al">
+                                <i class="fas fa-money-bill-wave"></i>
+                            </button>
                             <button class="btn-edit btn btn-sm me-1"
                                 data-bs-toggle="modal" data-bs-target="#guncelleModal"
                                 onclick="guncelleAc(
@@ -90,6 +145,45 @@ $doktorlar = doktor_listele($conn);
                     <?php endif; ?>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Ödeme Al Modal -->
+<div class="modal fade" id="odemeModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:linear-gradient(135deg,#1a7a45,#2e7d32);">
+                <h5 class="modal-title text-white"><i class="fas fa-money-bill-wave me-2"></i>Ödeme Al</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                <input type="hidden" name="action" value="odeme_al">
+                <input type="hidden" name="muayene_id" id="o_muayene_id">
+                <input type="hidden" name="sahip_id" id="o_sahip_id">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Tutar (₺)</label>
+                            <input type="number" name="tutar" id="o_tutar" step="0.01" min="0" class="form-control" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Ödeme Türü</label>
+                            <select name="tur" class="form-select" required>
+                                <option value="Nakit">💵 Nakit</option>
+                                <option value="Kredi Kartı">💳 Kredi Kartı</option>
+                                <option value="Banka Transferi">🏦 Banka Transferi</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn" style="background:linear-gradient(135deg,#1a7a45,#2e7d32);color:white;border:none;border-radius:10px;padding:10px 24px;font-weight:600;">
+                        <i class="fas fa-check me-2"></i>Ödemeyi Kaydet
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -189,6 +283,12 @@ function guncelleAc(id, tani, tedavi, ucret) {
     document.getElementById('g_tani').value = tani;
     document.getElementById('g_tedavi').value = tedavi;
     document.getElementById('g_ucret').value = ucret;
+}
+
+function odemeAc(muayene_id, sahip_id, tutar) {
+    document.getElementById('o_muayene_id').value = muayene_id;
+    document.getElementById('o_sahip_id').value = sahip_id;
+    document.getElementById('o_tutar').value = tutar;
 }
 </script>
 
