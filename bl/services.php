@@ -77,12 +77,31 @@ function kullanici_getir($conn, $ad) {
     return !empty($result) ? $result[0] : null;
 }
 
+// ===== FUNCTIONS (MySQL fonksiyonlarını çağır) =====
+function sahip_toplam_borc($conn, $sahip_id) {
+    $result = mysqli_query($conn, "SELECT fn_SahipToplamBorc($sahip_id) as toplam");
+    if ($result) {
+        $row = mysqli_fetch_assoc($result);
+        return $row['toplam'] ?? 0;
+    }
+    return 0;
+}
+
+function hayvan_muayene_sayisi($conn, $hayvan_id) {
+    $result = mysqli_query($conn, "SELECT fn_HayvanMuayeneSayisi($hayvan_id) as sayi");
+    if ($result) {
+        $row = mysqli_fetch_assoc($result);
+        return $row['sayi'] ?? 0;
+    }
+    return 0;
+}
+
 // ===== İSTATİSTİKLER =====
 function istatistik_getir($conn) {
     return [
-        'sahip' => count(sahip_listele($conn)),
-        'doktor' => count(doktor_listele($conn)),
-        'hayvan' => count(hayvan_listele($conn)),
+        'sahip'   => count(sahip_listele($conn)),
+        'doktor'  => count(doktor_listele($conn)),
+        'hayvan'  => count(hayvan_listele($conn)),
         'muayene' => count(muayene_listele($conn)),
     ];
 }
