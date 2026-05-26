@@ -64,19 +64,25 @@ $sahipler = sahip_listele($conn);
                         <th>Mail</th>
                         <th>Adres</th>
                         <th>Toplam Borç</th>
+                        <th>Toplam Ödeme</th>
+                        <th>Kalan Borç</th>
                         <th>İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($sahipler)): ?>
                     <tr>
-                        <td colspan="7" class="text-center py-4 text-muted">
+                        <td colspan="9" class="text-center py-4 text-muted">
                             <i class="fas fa-inbox fa-2x mb-2 d-block"></i>Henüz sahip kaydı yok.
                         </td>
                     </tr>
                     <?php else: ?>
                     <?php foreach ($sahipler as $s): ?>
-                    <?php $borc = sahip_toplam_borc($conn, $s['sahip_id']); ?>
+                    <?php
+                        $toplam_borc = sahip_toplam_borc($conn, $s['sahip_id']);
+                        $kalan_borc  = sahip_net_bakiye($conn, $s['sahip_id']);
+                        $toplam_odeme = $toplam_borc - $kalan_borc;
+                    ?>
                     <tr>
                         <td><span class="badge-custom">#<?= $s['sahip_id'] ?></span></td>
                         <td><strong><?= htmlspecialchars($s['sahip_ad'] . ' ' . $s['sahip_soyad']) ?></strong></td>
@@ -84,13 +90,23 @@ $sahipler = sahip_listele($conn);
                         <td><i class="fas fa-envelope me-1 text-muted"></i><?= htmlspecialchars($s['sahip_mail']) ?></td>
                         <td><?= htmlspecialchars($s['sahip_adres']) ?></td>
                         <td>
-                            <?php if ($borc > 0): ?>
+                            <span style="color:#1565c0;font-weight:600;">
+                                <?= number_format($toplam_borc, 2) ?> ₺
+                            </span>
+                        </td>
+                        <td>
+                            <span style="color:#1a7a45;font-weight:600;">
+                                <?= number_format($toplam_odeme, 2) ?> ₺
+                            </span>
+                        </td>
+                        <td>
+                            <?php if ($kalan_borc > 0): ?>
                                 <span class="badge" style="background:#fde8e8;color:#dc3545;font-size:0.85rem;padding:6px 10px;">
-                                    <i class="fas fa-lira-sign me-1"></i><?= number_format($borc, 2) ?> ₺
+                                    <i class="fas fa-exclamation-circle me-1"></i><?= number_format($kalan_borc, 2) ?> ₺
                                 </span>
                             <?php else: ?>
                                 <span class="badge" style="background:#e8f5ee;color:#1a7a45;font-size:0.85rem;padding:6px 10px;">
-                                    <i class="fas fa-check me-1"></i>Borç Yok
+                                    <i class="fas fa-check-circle me-1"></i>Kapandı
                                 </span>
                             <?php endif; ?>
                         </td>
